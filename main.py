@@ -1,9 +1,10 @@
 # Здесь будет основной код, который мы позже вставим
 import os
+from dotenv import load_dotenv
+load_dotenv()
 import telebot
 import openai
 from telebot import types
-from dotenv import load_dotenv
 from datetime import datetime
 
 # Загрузка токенов из .env
