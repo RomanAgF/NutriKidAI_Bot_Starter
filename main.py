@@ -1,32 +1,23 @@
-# Здесь будет основной код, который мы позже вставим
+# main.py — обновлённая версия
 import os
 from dotenv import load_dotenv
-load_dotenv()
-import telebot
-import openai
-from telebot import types
+from telebot import TeleBot, types
 from datetime import datetime
+from openai import OpenAI
+import csv
 
-# Загрузка токенов из .env
+# Загрузка переменных окружения
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Отладочные сообщения
-print("=== Debug Information ===")
-print(f"Current working directory: {os.getcwd()}")
-print(f"BOT_TOKEN: {BOT_TOKEN}")
-print(f"OPENAI_API_KEY: {OPENAI_API_KEY}")
-print("=======================")
+# Инициализация клиентов
+bot = TeleBot(BOT_TOKEN)
+openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
-openai.api_key = OPENAI_API_KEY
-
-# Инициализация бота
-bot = telebot.TeleBot(BOT_TOKEN)
-
-# Простая база пользователей
+# Пользователи и отзывы
 user_data = {}
-feedback_list = []
+feedback_file = "feedback.csv"
 
 class User:
     def __init__(self, user_id):
@@ -44,21 +35,18 @@ def get_user(user_id):
 BABY_FOOD_KNOWLEDGE = """
 Ты — эксперт по детскому питанию, следуешь российским стандартам.
 Всегда уточняй: 'Проконсультируйтесь с педиатром перед введением новых продуктов'.
-
 6м: овощи (кабачок, брокколи, цветная капуста)
 7м: каши без глютена (рис, гречка, кукуруза)
 8м: мясо (индейка, кролик)
 9м: фрукты (яблоко, груша, банан)
 10м: рыба (треска, хек)
 12м: творог, кефир
-
 НЕ рекомендовать до года: мед, орехи, цельное молоко, яйца до 8м.
 """
 
-# Команда /start
+# Главное меню
 @bot.message_handler(commands=['start'])
 def start(message):
-    user = get_user(message.from_user.id)
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("👶 Профиль", "🍽️ Рецепт", "🤖 Вопрос", "📝 Отзыв")
     bot.send_message(message.chat.id, "Привет! Я NutriKid — бот по детскому питанию. Что хотите сделать?", reply_markup=markup)
@@ -81,7 +69,7 @@ def process_age(message):
     except ValueError:
         bot.send_message(message.chat.id, "❌ Пожалуйста, введите только число.")
 
-# Получение рецепта
+# Рецепт
 @bot.message_handler(func=lambda m: "Рецепт" in m.text)
 def get_recipe(message):
     user = get_user(message.from_user.id)
@@ -91,7 +79,7 @@ def get_recipe(message):
 
     prompt = f"{BABY_FOOD_KNOWLEDGE}\nВозраст ребёнка: {user.child_age} месяцев\nСгенерируй 3 рецепта на русском."
     try:
-        response = openai.ChatCompletion.create(
+        response = openai_client.chat.completions.create(
             model="gpt-4",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7,
@@ -102,7 +90,7 @@ def get_recipe(message):
     except Exception as e:
         bot.send_message(message.chat.id, f"⚠️ Ошибка при генерации рецепта: {str(e)}")
 
-# AI-консультация
+# Вопрос
 @bot.message_handler(func=lambda m: "Вопрос" in m.text)
 def ask_question(message):
     msg = bot.send_message(message.chat.id, "Введите вопрос по детскому питанию:")
@@ -111,7 +99,7 @@ def ask_question(message):
 def process_question(message):
     prompt = f"{BABY_FOOD_KNOWLEDGE}\nВопрос: {message.text}"
     try:
-        response = openai.ChatCompletion.create(
+        response = openai_client.chat.completions.create(
             model="gpt-4",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7,
@@ -122,14 +110,19 @@ def process_question(message):
     except Exception as e:
         bot.send_message(message.chat.id, f"⚠️ Ошибка при ответе: {str(e)}")
 
-# Форма обратной связи
-@bot.message_handler(func=lambda m: m.text == "📝 Отзыв")
+# Отзыв
+@bot.message_handler(func=lambda m: "Отзыв" in m.text)
 def get_feedback(message):
     msg = bot.send_message(message.chat.id, "Пожалуйста, оставьте ваш отзыв о боте:")
     bot.register_next_step_handler(msg, save_feedback)
 
 def save_feedback(message):
-    feedback_list.append((message.from_user.username or "неизвестно", message.text, datetime.now()))
+    user = message.from_user.username or "аноним"
+    feedback = message.text
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    with open(feedback_file, "a", encoding="utf-8", newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow([user, feedback, timestamp])
     bot.send_message(message.chat.id, "Спасибо за ваш отзыв! 🙏")
 
 # Запуск
