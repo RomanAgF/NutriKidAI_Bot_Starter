@@ -64,7 +64,7 @@ def start(message):
     bot.send_message(message.chat.id, "Привет! Я NutriKid — бот по детскому питанию. Что хотите сделать?", reply_markup=markup)
 
 # Профиль
-@bot.message_handler(func=lambda m: m.text == "👶 Профиль")
+@bot.message_handler(func=lambda m: "Профиль" in m.text)
 def set_profile(message):
     msg = bot.send_message(message.chat.id, "Введите возраст ребёнка в месяцах (например: 6):")
     bot.register_next_step_handler(msg, process_age)
@@ -82,7 +82,7 @@ def process_age(message):
         bot.send_message(message.chat.id, "❌ Пожалуйста, введите только число.")
 
 # Получение рецепта
-@bot.message_handler(func=lambda m: m.text == "🍽️ Рецепт")
+@bot.message_handler(func=lambda m: "Рецепт" in m.text)
 def get_recipe(message):
     user = get_user(message.from_user.id)
     if not user.child_age:
@@ -103,7 +103,7 @@ def get_recipe(message):
         bot.send_message(message.chat.id, f"⚠️ Ошибка при генерации рецепта: {str(e)}")
 
 # AI-консультация
-@bot.message_handler(func=lambda m: m.text == "🤖 Вопрос")
+@bot.message_handler(func=lambda m: "Вопрос" in m.text)
 def ask_question(message):
     msg = bot.send_message(message.chat.id, "Введите вопрос по детскому питанию:")
     bot.register_next_step_handler(msg, process_question)
