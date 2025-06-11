@@ -1,4 +1,5 @@
-# Здесь будет основной код, который мы позже вставимimport os
+# Здесь будет основной код, который мы позже вставим
+import os
 import telebot
 import openai
 from telebot import types
@@ -9,6 +10,14 @@ from datetime import datetime
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# Отладочные сообщения
+print("=== Debug Information ===")
+print(f"Current working directory: {os.getcwd()}")
+print(f"BOT_TOKEN: {BOT_TOKEN}")
+print(f"OPENAI_API_KEY: {OPENAI_API_KEY}")
+print("=======================")
+
 openai.api_key = OPENAI_API_KEY
 
 # Инициализация бота
